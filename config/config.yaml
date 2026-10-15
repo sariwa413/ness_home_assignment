@@ -1,0 +1,29 @@
+default: &default
+  base_url: "https://www.ebay.com"
+  cart_url: "https://cart.ebay.com"
+  browser: "chromium"          # chromium | firefox | webkit
+  headless: true
+  locale: "en-US"
+  # A real desktop UA; the default headless one trips eBay's bot challenge.
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+  timeout_ms: 30000
+  slow_mo_ms: 0
+  navigation_retries: 3        # retries when eBay answers with a throttling page
+  max_result_pages: 3          # paging guard for searchItemsByNameUnderPrice
+  random_seed: 1234            # keeps "random" variant selection reproducible
+  artifacts_dir: "artifacts"
+  auth:
+    mode: "guest"              # guest | credentials
+    username: ""
+    password: ""
+
+# Developer machine: watch the run.
+local:
+  <<: *default
+  headless: false
+  slow_mo_ms: 150
+
+# Pipeline: headless, fewer pages, no slow motion.
+ci:
+  <<: *default
+  max_result_pages: 2

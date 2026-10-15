@@ -1,0 +1,7 @@
+{
+  "scenarios": [
+    { "id": "shoes_under_220", "query": "shoes", "max_price": 220, "limit": 5 },
+    { "id": "headphones_under_60", "query": "headphones", "max_price": 60, "limit": 3 },
+    { "id": "laptop_under_15", "query": "laptop", "max_price": 15, "limit": 5 }
+  ]
+}
