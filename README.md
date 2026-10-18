@@ -138,4 +138,5 @@ variable: `BASE_URL`, `CART_URL`, `BROWSER`, `HEADLESS`, `LOCALE`, `USER_AGENT`,
 
 ## AI bug-hunt exercise
 
-See [ReadMeAIBugs.md](ReadMeAIBugs.md).
+Pending: `ReadMeAIBugs.md` will hold the static review of the AI-written test code once that
+snippet is available.
