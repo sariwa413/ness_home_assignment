@@ -93,8 +93,9 @@ variable: `BASE_URL`, `CART_URL`, `BROWSER`, `HEADLESS`, `LOCALE`, `USER_AGENT`,
   XPath (as the exercise requires) and accept both eBay's legacy `s-item` and current `s-card`
   markup.
 - **Overlays.** Consent banners and modal lightboxes (shipping address, promotions) appear at
-  unpredictable moments and swallow pointer events. `BasePage.click` retries once after
-  dismissing them.
+  unpredictable moments and swallow pointer events. `BasePage.click` retries after dismissing
+  them, and as a last resort dispatches the click directly (eBay renders add-to-cart twice —
+  once in an off-screen sticky bar that cannot be scrolled into view).
 - **Price parsing.** `parse_price` handles currency symbols, thousands separators in both the
   `1,234.50` and `1.234,50` conventions, and ranges like `$20.00 to $35.00` (judged by the
   lowest value).
@@ -116,14 +117,16 @@ variable: `BASE_URL`, `CART_URL`, `BROWSER`, `HEADLESS`, `LOCALE`, `USER_AGENT`,
   Set `AUTH_MODE=credentials` with `EBAY_USERNAME`/`EBAY_PASSWORD` to drive the real form.
 - **Anti-bot challenge.** eBay occasionally answers with "Please verify yourself to continue" or
   a generic error page, especially from headless browsers and after several runs in quick
-  succession. The suite detects this page and raises `BotChallengeError` with a clear message
-  instead of failing on a confusing missing-locator error. Re-run with `ENV=local` (headed) or
-  from a different network.
+  succession. Navigation retries with backoff (`navigation_retries`); if the block persists the
+  suite raises `SiteUnavailableError` with a clear message instead of failing on a confusing
+  missing-locator error. Re-run with `ENV=local` (headed), after a pause, or from a different
+  network.
 - **Quantity is always 1.** Variants (size, colour) are chosen at random from the available
   options, but quantity is left at 1 — a random quantity would make the
   `budget_per_item * items_count` threshold meaningless.
-- **Variant pickers.** Only `<select>`-based variant pickers are automated. A minority of
-  listings use custom button grids; those are added with their default selection.
+- **Variant pickers.** Both the legacy `<select>` pickers and eBay's newer button-plus-listbox
+  widget are automated, re-reading the available options after each pick (choosing a colour
+  re-filters the sizes). A rare custom button grid is added with its default selection.
 - **Currency.** eBay picks the displayed currency from the session's geography, so a run from
   Israel renders ILS. Prices are therefore compared as plain numbers in whatever currency the
   site shows; no conversion is performed. This is consistent — the listing prices used for
