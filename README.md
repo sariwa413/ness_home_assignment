@@ -60,7 +60,9 @@ live site, raise `limit` in `data/scenarios.json` above one page of results.
 
 ## Report
 
-The suite produces a single **Allure** report. Each run writes raw results to
+The suite produces a single **Allure** report. A snapshot of a passing run is committed at
+`artifacts/allure-report/` (screenshots included; the Playwright trace is left out of git
+because it is tens of megabytes). Each new run writes raw results to
 `artifacts/allure-results/` (cleared at the start of every run), then render it with the
 helper script, which locates Java for the session and opens the report in a browser:
 
@@ -76,8 +78,16 @@ allure serve artifacts/allure-results
 ```
 
 Always view the report through `serve` (an `http://` URL). Opening
-`artifacts/allure-report/index.html` straight from disk shows an empty or broken page,
-because browsers block the report's local data fetches over `file://`.
+`artifacts/allure-report/index.html` straight from disk — or from GitHub's file viewer —
+shows an empty or broken page, because browsers block the report's local data fetches over
+`file://`. After cloning, either run `.\scripts\allure.cmd` (needs a fresh `artifacts/allure-results`)
+or serve the committed snapshot:
+
+```powershell
+.\.venv\Scripts\python.exe -m http.server 8080 --directory artifacts/allure-report
+```
+
+then open http://127.0.0.1:8080 .
 
 The report shows one test per scenario, titled with its query and budget, broken into clear
 steps — **Establish session → Search → Add item N/M → Verify cart subtotal** — with a
@@ -129,6 +139,7 @@ src/pages/                   Page Object Model, one class per screen
 src/flows/shopping_flow.py   the four business actions, composed from page objects
 tests/                       pytest fixtures + the data-driven e2e scenario
 scripts/allure.cmd           renders the Allure report (finds Java, serves over http)
+artifacts/allure-report/     committed snapshot of a passing run
 ```
 
 Three layers, each with one responsibility:
@@ -223,8 +234,3 @@ variable: `BASE_URL`, `CART_URL`, `BROWSER`, `HEADLESS`, `LOCALE`, `USER_AGENT`,
 - **Live site.** The tests run against production eBay, so the catalogue changes between runs.
   Random variant selection is seeded (`random_seed`) to keep a run reproducible, but the
   listings themselves are not.
-
-## AI bug-hunt exercise
-
-Pending: `ReadMeAIBugs.md` will hold the static review of the AI-written test code once that
-snippet is available.

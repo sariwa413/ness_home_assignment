@@ -1,0 +1,24 @@
+WARNING  HomePage:base_page.py:65 eBay refused https://www.ebay.com/ (attempt 1/4), reloading after backoff
+INFO     ShoppingFlow:shopping_flow.py:51 Session established as guest (signed in: False)
+WARNING  HomePage:base_page.py:65 eBay refused https://www.ebay.com/sch/i.html?_nkw=piano&_sacat=0&_from=R40&_trksid=m570.l1313 (attempt 1/4), reloading after backoff
+INFO     HomePage:home_page.py:53 Searched for 'piano'
+INFO     SearchResultsPage:search_results_page.py:74 Applied on-page max price facet: 220
+INFO     SearchResultsPage:search_results_page.py:181 Match: 146.62 <= 220.00 | https://www.ebay.com/itm/205581209939
+INFO     SearchResultsPage:search_results_page.py:181 Match: 146.07 <= 220.00 | https://www.ebay.com/itm/405998865323
+INFO     SearchResultsPage:search_results_page.py:181 Match: 217.18 <= 220.00 | https://www.ebay.com/itm/298134851785
+INFO     SearchResultsPage:search_results_page.py:181 Match: 139.64 <= 220.00 | https://www.ebay.com/itm/198730819031
+INFO     SearchResultsPage:search_results_page.py:181 Match: 16.10 <= 220.00 | https://www.ebay.com/itm/325181852482
+INFO     SearchResultsPage:search_results_page.py:181 Match: 80.37 <= 220.00 | https://www.ebay.com/itm/305708419296
+INFO     SearchResultsPage:search_results_page.py:105 Page 1: 6/6 matching items collected
+INFO     SearchResultsPage:search_results_page.py:108 Reached the requested limit of 6
+INFO     ShoppingFlow:shopping_flow.py:66 Found 6/6 items for 'piano' under 220
+INFO     ItemPage:item_page.py:48 Selected variants: {'Color': 'Black\nselected'}
+INFO     ShoppingFlow:shopping_flow.py:84 Added to cart: Jansen Save-a-Rug Mat to Protect Flooring From Piano/Keyboard Pedals and Playing
+INFO     ShoppingFlow:shopping_flow.py:84 Added to cart: Piano Tuning Kit 16pcs Tuning Tool Set Tuning Wrench Hammer Mute Tweezers Set
+INFO     ShoppingFlow:shopping_flow.py:84 Added to cart: Stilos Ritmos Para Teclados YAMAHA PSR S 710 750 775 910 950 MARCA REGISTRADA
+INFO     ShoppingFlow:shopping_flow.py:84 Added to cart: VTG Casio SA-75 Electronic Keyboard Portable Music Travel Piano -100 Tones
+INFO     ShoppingFlow:shopping_flow.py:84 Added to cart: Music 61 key Keyboard or Piano Stickers 36 white laminated stickers
+INFO     ShoppingFlow:shopping_flow.py:84 Added to cart: Portable 76-Key Keyboard Electric Piano Padded Case Gig Bag Oxford Cloth
+INFO     ShoppingFlow:shopping_flow.py:86 Added 6/6 items to the cart
+INFO     CartPage:cart_page.py:57 Cart subtotal reads 'ILS 1,225.43'
+INFO     ShoppingFlow:shopping_flow.py:98 Cart subtotal 1225.43 vs budget 1320.00

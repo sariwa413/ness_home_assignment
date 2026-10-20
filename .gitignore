@@ -1,6 +1,12 @@
 .venv/
 __pycache__/
 *.pyc
-artifacts/
 .pytest_cache/
 .env
+
+# Run output stays local, except the generated Allure HTML snapshot.
+artifacts/*
+!artifacts/allure-report/
+!artifacts/allure-report/**
+# Playwright traces are tens of MB; keep them out of git.
+artifacts/allure-report/**/*.zip
