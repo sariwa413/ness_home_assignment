@@ -2,15 +2,21 @@
 
 from __future__ import annotations
 
+import allure
 import pytest
 
 from src.flows.shopping_flow import ShoppingFlow
 from src.utils.datasets import load_scenarios
 
 
+@allure.epic("eBay shopping")
+@allure.feature("Cart budget")
 @pytest.mark.e2e
 @pytest.mark.parametrize("scenario", load_scenarios(), ids=lambda s: s["id"])
 def test_cart_total_stays_within_budget(flow: ShoppingFlow, scenario: dict) -> None:
+    allure.dynamic.title(
+        f"'{scenario['query']}': cart stays within {scenario['max_price']} per item (up to {scenario['limit']})"
+    )
     flow.login()
 
     urls = flow.search_items_by_name_under_price(

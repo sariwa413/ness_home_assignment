@@ -8,8 +8,7 @@ default: &default
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
   timeout_ms: 30000
   slow_mo_ms: 0
-  navigation_retries: 3        # retries when eBay answers with a throttling page
-  max_result_pages: 3          # paging guard for searchItemsByNameUnderPrice
+  navigation_retries: 4        # reloads when eBay answers with its error/challenge page
   random_seed: 1234            # keeps "random" variant selection reproducible
   artifacts_dir: "artifacts"
   auth:
@@ -23,7 +22,6 @@ local:
   headless: false
   slow_mo_ms: 150
 
-# Pipeline: headless, fewer pages, no slow motion.
+# Pipeline: headless, no slow motion.
 ci:
   <<: *default
-  max_result_pages: 2

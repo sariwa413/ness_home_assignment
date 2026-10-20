@@ -20,38 +20,131 @@ assertCartTotalNotExceeds(220, len(urls))     ->  cart subtotal <= 220 * number 
 py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m playwright install chromium
+Copy-Item .env.example .env        # optional, see Configuration below
 ```
 
 On Linux/macOS use `python3 -m venv .venv` and `.venv/bin/python` instead.
 
+## Configuration
+
+Settings come from three layers, each overriding the one before it:
+
+1. **`config/config.yaml`** — the profiles (`default`, `local`, `ci`) committed to the repo.
+2. **`.env`** — your local overrides, git-ignored. Start from `.env.example`, which
+   documents every available variable.
+3. **Real environment variables** — win over `.env`, so `$env:ENV="local"` still changes a
+   single run without editing a file.
+
+`.env` is where credentials belong (`EBAY_USERNAME` / `EBAY_PASSWORD`), which is precisely
+why it is git-ignored and `config.yaml` is not.
+
 ## Run
 
+The scenario itself is the `e2e` run:
+
 ```powershell
-.\.venv\Scripts\python.exe -m pytest                 # everything
-.\.venv\Scripts\python.exe -m pytest -m unit         # offline tests only, no browser
-.\.venv\Scripts\python.exe -m pytest -m e2e          # the browser scenario
-$env:ENV="local"; .\.venv\Scripts\python.exe -m pytest -m e2e   # headed, slow motion
-$env:DATASET="regression"; .\.venv\Scripts\python.exe -m pytest -m e2e
+.\.venv\Scripts\python.exe -m pytest -m e2e
 ```
 
-## Reports
+Variations:
 
-Every run writes to `artifacts/`:
+```powershell
+$env:ENV="local"; .\.venv\Scripts\python.exe -m pytest -m e2e        # headed, slow motion
+$env:DATASET="regression"; .\.venv\Scripts\python.exe -m pytest -m e2e  # the wider dataset
+```
 
-| Artifact | Path |
+Two further suites run offline, so they are fast and never flaky:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -m unit         # parsing helpers, no browser, ~0.4s
+.\.venv\Scripts\python.exe -m pytest -m integration  # paging against stubbed pages, ~20s
+.\.venv\Scripts\python.exe -m pytest                 # everything
+```
+
+A live run takes roughly five minutes: eBay is slow, and the suite deliberately backs off
+and retries when the site answers with its error page.
+
+### Testing the paging without waiting for 40 listings
+
+Paging only kicks in when one result page cannot satisfy `limit`, which against the live
+site means a long run. `tests/test_paging.py` pins the behaviour instead by serving
+stubbed result pages through Playwright's request interception, so each case is exact and
+takes a second:
+
+| Scenario | What it proves |
 | --- | --- |
-| HTML report | `artifacts/report.html` |
-| JUnit XML | `artifacts/junit.xml` |
-| Allure results | `artifacts/allure-results/` |
-| Screenshots | `artifacts/screenshots/` |
-| Playwright traces | `artifacts/traces/*.zip` |
+| 3 cards per page, `limit=7` | walks pages 1-3, stops mid-page, never fetches page 4 |
+| `limit=40`, only 5 listings exist | returns all 5 and stops at the last page |
+| listings over budget on page 2 | the price filter keeps applying on every page |
+| the same listing on two pages | counted once, so it cannot fill two slots |
+| a page with nothing usable | tolerated; paging continues to the page after it |
 
-Open a trace with `.\.venv\Scripts\python.exe -m playwright show-trace artifacts\traces\<name>.zip`.
-Render the Allure results with `allure serve artifacts/allure-results` (requires the Allure CLI).
+To watch real paging instead, raise `limit` in `data/regression.json` above one page of
+results (`$env:DATASET="regression"`).
+
+## Report
+
+The suite produces a single **Allure** report. Each run writes raw results to
+`artifacts/allure-results/` (cleared at the start of every run), then render it with the
+helper script, which locates Java for the session and opens the report in a browser:
+
+```powershell
+.\scripts\allure.cmd            # serve the latest results
+.\scripts\allure.cmd generate   # or write a static report to artifacts/allure-report
+```
+
+Equivalently, if the `allure` CLI and Java are already on your `PATH`:
+
+```powershell
+allure serve artifacts/allure-results
+```
+
+Always view the report through `serve` (an `http://` URL). Opening
+`artifacts/allure-report/index.html` straight from disk shows an empty or broken page,
+because browsers block the report's local data fetches over `file://`.
+
+The report shows one test per scenario, titled with its query and budget, broken into clear
+steps — **Establish session → Search → Add item N/M → Verify cart subtotal** — with a
+screenshot attached to each step and the full Playwright trace attached to the test. Open an
+attached trace in the Playwright viewer with
+`.\.venv\Scripts\python.exe -m playwright show-trace <trace.zip>`.
+
+### When a test fails or skips
+
+Two further attachments are added to the test itself (not hidden under "Tear down"):
+
+- **`failure-screenshot`** / **`skip-screenshot`** — a full-page capture of the browser at
+  the moment the test stopped, so the state that caused it is visible without re-running
+  anything.
+- **`what happened`** — a plain-language note giving the error, the URL and page title at
+  the time, and what the outcome actually means. The cases the suite knows about are
+  distinguished: eBay refusing the session (`SiteUnavailableError`), an element never
+  appearing (`TimeoutError`, pointing at the trace), a genuine budget breach
+  (`AssertionError`, where the message carries the actual and expected totals), and a skip.
+
+Skips carry the same evidence deliberately. The scenario skips when the search yields no
+usable listing, and the screenshot is the fastest way to tell a genuinely empty result set
+from eBay having quietly served an error page instead.
+
+Allure separates these by status: a budget breach is **failed**, while an unexpected error
+such as eBay blocking the run is **broken** — so a site-side block is never mistaken for the
+cart exceeding its budget.
+
+Installing the Allure CLI (one-time): `npm install -g allure-commandline`, `scoop install
+allure`, or download it from the
+[Allure releases](https://github.com/allure-framework/allure2/releases). The CLI is a Java
+program and needs a JDK/JRE 8+; `scripts\allure.cmd` auto-detects a locally installed one.
+
+The helper is a `.cmd` batch file rather than PowerShell on purpose. If your machine's
+execution policy is `AllSigned` or `Restricted` (check with `Get-ExecutionPolicy -List`),
+PowerShell refuses every unsigned `.ps1` — including the `allure.ps1` shim that npm
+installs — which surfaces as `UnauthorizedAccess`. Invoking `allure.cmd` avoids the policy
+entirely, so no machine-wide settings need changing.
 
 ## Architecture
 
 ```
+.env.example                 every overridable variable, documented; copy to .env
 config/config.yaml           profiles: default | local | ci
 data/*.json                  external test inputs (scenarios)
 src/config.py                typed Config, YAML profile + env overrides
@@ -59,6 +152,8 @@ src/utils/                   pure helpers: price parsing, URL canonicalisation, 
 src/pages/                   Page Object Model, one class per screen
 src/flows/shopping_flow.py   the four business actions, composed from page objects
 tests/                       pytest fixtures + the data-driven scenarios
+tests/test_paging.py         paging proved against stubbed result pages
+scripts/allure.cmd           renders the Allure report (finds Java, serves over http)
 ```
 
 Three layers, each with one responsibility:
@@ -83,27 +178,39 @@ Scenarios live in `data/smoke.json` and `data/regression.json` and are injected 
 Configuration comes from `config/config.yaml`, which defines the `default`, `local` and `ci`
 profiles. Pick one with `ENV=<profile>`. Every field can be overridden per-run by an environment
 variable: `BASE_URL`, `CART_URL`, `BROWSER`, `HEADLESS`, `LOCALE`, `USER_AGENT`, `TIMEOUT_MS`,
-`SLOW_MO_MS`, `MAX_RESULT_PAGES`, `RANDOM_SEED`, `ARTIFACTS_DIR`, `AUTH_MODE`, `EBAY_USERNAME`,
-`EBAY_PASSWORD`.
+`SLOW_MO_MS`, `RANDOM_SEED`, `ARTIFACTS_DIR`, `AUTH_MODE`, `EBAY_USERNAME`, `EBAY_PASSWORD`.
 
 ### Robustness
 
 - **Smart locators.** Elements are described by several equivalent selectors and resolved with
-  `first_visible`, so an A/B-tested layout does not break the run. Result cards are matched by
-  XPath (as the exercise requires) and accept both eBay's legacy `s-item` and current `s-card`
-  markup.
+  `first_visible`, so an A/B-tested layout does not break the run. The order follows the
+  Playwright guidance: a stable `#id` first, then role, label or placeholder, and only then
+  CSS or XPath. Each chain ends with something eBay is unlikely to rename — the `_udhi` form
+  field behind the price facet, the `/itm/` href pattern — rather than a styling class.
+  Result cards are matched by XPath (as the exercise requires) and accept both eBay's legacy
+  `s-item` and current `s-card` markup; eBay has already completed that migration, which is
+  why the card's price is read through a priority-ordered list ending in a deliberately loose
+  `[class*='price']`.
+- **Reads that race the page.** Values polled while eBay re-renders — the header cart badge
+  after an add-to-cart, the pager's disabled state — are read with a short deadline and
+  treated as unknown on timeout, instead of blocking for the full 30s on a node that has just
+  been replaced.
 - **Overlays.** Consent banners and modal lightboxes (shipping address, promotions) appear at
   unpredictable moments and swallow pointer events. `BasePage.click` retries after dismissing
   them, and as a last resort dispatches the click directly (eBay renders add-to-cart twice —
   once in an off-screen sticky bar that cannot be scrolled into view).
-- **Price parsing.** `parse_price` handles currency symbols, thousands separators in both the
-  `1,234.50` and `1.234,50` conventions, and ranges like `$20.00 to $35.00` (judged by the
-  lowest value).
-- **Price filtering.** The on-page min/max facet is used when present; otherwise the equivalent
-  `_udhi` query parameter is applied, so filtering works in every category and viewport.
-- **Paging.** When a page yields fewer than `limit` matches the run follows "Next" and keeps
-  collecting, bounded by `max_result_pages`. Returning fewer items — including zero — is a valid
-  outcome and skips rather than fails the test.
+- **Price parsing.** `parse_price` keys on the number written next to a currency, so a whole
+  row can be handed to it: `"Subtotal (6 items) ILS 478.99"` reads as 478.99 and not as 6.
+  It covers symbols and ISO codes on either side (`$29.99`, `US $1,499.00`, `478.99 ₪`),
+  both thousands conventions (`1,234.50` and `1.234,50`), non-breaking spaces as eBay emits
+  them, and ranges like `$20.00 to $35.00` (judged by the lowest value). Text with no
+  amount, such as `"Free"`, returns `None` rather than guessing.
+- **Price filtering.** The on-page min/max facet is used when present. If it is hidden for the
+  category or viewport, cards are still dropped when their listed price is above the budget —
+  a second `/sch` navigation just to inject `_udhi` is what trips eBay's bot challenge.
+- **Paging.** When a page yields fewer matches than `limit`, the run follows "Next" until the
+  limit is filled or eBay has no further page. Returning fewer items — including zero — is a
+  valid outcome and skips rather than fails the test.
 - **De-duplication.** Item links are canonicalised to `/itm/<id>`, which strips tracking
   parameters so the same listing is never counted twice across pages, and drops ads and eBay's
   "Shop on eBay" placeholder card.
@@ -115,12 +222,16 @@ variable: `BASE_URL`, `CART_URL`, `BROWSER`, `HEADLESS`, `LOCALE`, `USER_AGENT`,
 - **Guest session.** `login()` runs as a guest by default. eBay guards the real sign-in with a
   bot challenge that cannot be automated reliably, and the scenario does not need an account.
   Set `AUTH_MODE=credentials` with `EBAY_USERNAME`/`EBAY_PASSWORD` to drive the real form.
-- **Anti-bot challenge.** eBay occasionally answers with "Please verify yourself to continue" or
-  a generic error page, especially from headless browsers and after several runs in quick
-  succession. Navigation retries with backoff (`navigation_retries`); if the block persists the
-  suite raises `SiteUnavailableError` with a clear message instead of failing on a confusing
-  missing-locator error. Re-run with `ENV=local` (headed), after a pause, or from a different
-  network.
+- **Anti-bot challenge and the "Sorry" page.** eBay occasionally answers with "Please verify
+  yourself to continue" or its "Something went wrong on our end" error page, especially from
+  headless browsers and after several runs in quick succession. It serves that error *at the
+  requested URL*, so `BasePage.wait_until_available` reloads with an increasing backoff
+  (`navigation_retries`, default 4) until the real page arrives. Every navigation funnels
+  through it — including the click-driven ones (search submit, next page, the cart header
+  link), where the triggering control no longer exists on the error page and so the click
+  cannot simply be repeated. Only if the block persists across all attempts does the suite
+  raise `SiteUnavailableError` with a clear message instead of a confusing missing-locator
+  error. Re-run with `ENV=local` (headed), after a pause, or from a different network.
 - **Quantity is always 1.** Variants (size, colour) are chosen at random from the available
   options, but quantity is left at 1 — a random quantity would make the
   `budget_per_item * items_count` threshold meaningless.

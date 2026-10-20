@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import random
+import re
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from playwright.sync_api import Locator
 
@@ -12,19 +13,14 @@ from src.pages.base_page import BasePage
 
 
 class ItemPage(BasePage):
-    TITLE = "h1 .ux-textspans--BOLD, h1"
-    # Variant pickers come in two flavours: the legacy <select> and the newer
-    # button-plus-listbox widget used by the "msku-evo" item layout.
+    # Variant pickers come in two flavours. The legacy one is a native <select>; the
+    # newer "msku-evo" layout is a button-plus-listbox. Both are scoped by CSS so they
+    # never match eBay's unrelated header category dropdown, which is a functional need
+    # rather than a styling choice.
     VARIANT_SELECTS = "select.x-msku__select-box, select[name^='msku']"
     VARIANT_CONTROLS = ".x-msku-evo .listbox-button__control, .x-msku .listbox-button__control"
-    VARIANT_OPTIONS = "[role='option']:visible:not([aria-disabled='true'])"
     VARIANT_OPTION_VALUE = ".listbox__value"
     PLACEHOLDER_OPTION_LABEL = "select"
-    ADD_TO_CART = (
-        "#atcRedesignId, #isCartBtn_btn, a[id^='atcBtn'], [data-testid='x-atc-action'] a,"
-        " a:has-text('Add to cart'), button:has-text('Add to cart')"
-    )
-    ADDED_CONFIRMATION = "text=/added to (your )?cart|go to cart/i"
     PLACEHOLDER_OPTION_VALUES = {"", "-1", "0"}  # "Select size", "- Select -", ...
     ADD_TO_CART_TIMEOUT_S = 15
 
@@ -33,8 +29,15 @@ class ItemPage(BasePage):
         return self
 
     def title(self) -> str:
-        heading = self.first_visible(self.TITLE, timeout_ms=5000)
+        heading = self.first_visible(
+            self.page.get_by_role("heading", level=1),
+            self.page.locator(".x-item-title__mainTitle"),
+            self.page.locator("#itemTitle"),  # pre-redesign listings
+            timeout_ms=5000,
+        )
         return (heading.inner_text() if heading else "unknown item").strip()
+
+    # --- variants ---------------------------------------------------------
 
     def select_random_variants(self, rng: random.Random) -> Dict[str, str]:
         """Pick a random available value for every variant picker (size, colour, ...)."""
@@ -62,8 +65,13 @@ class ItemPage(BasePage):
             label = control.inner_text().split(":")[0].strip()
             self.click(control)
 
-            options = self.page.locator(self.VARIANT_OPTIONS)
-            selectable = [i for i in range(options.count()) if self._option_label(options.nth(i))]
+            options = self.page.get_by_role("option").locator("visible=true")
+            selectable = [
+                i
+                for i in range(options.count())
+                if options.nth(i).get_attribute("aria-disabled") != "true"
+                and self._option_label(options.nth(i))
+            ]
             if not selectable:
                 self.page.keyboard.press("Escape")
                 continue
@@ -107,13 +115,26 @@ class ItemPage(BasePage):
 
         return chosen
 
+    # --- add to cart ------------------------------------------------------
+
+    def _add_to_cart_button(self) -> Optional[Locator]:
+        # Prefer the stable ids, then the accessible role/name, then the id prefix eBay
+        # uses for the sticky-bar variant.
+        return self.first_visible(
+            self.page.locator("#atcRedesignId"),
+            self.page.locator("#isCartBtn_btn"),
+            self.page.get_by_role("button", name=re.compile("add to cart", re.I)),
+            self.page.locator("a[id^='atcBtn']"),
+            timeout_ms=5000,
+        )
+
     def add_to_cart(self) -> bool:
         """Click add-to-cart and wait for the cart to register the item.
 
         Returns ``False`` for listings that do not offer the action (auction-only
         listings) or whose add-to-cart request did not go through.
         """
-        button = self.first_visible(self.ADD_TO_CART, timeout_ms=5000)
+        button = self._add_to_cart_button()
         if not button:
             self.log.warning("No add-to-cart control on %s", self.page.url)
             return False
@@ -134,13 +155,14 @@ class ItemPage(BasePage):
         the site then redirects to the cart, shows a confirmation, or just bumps the
         header badge.
         """
+        confirmation = self.page.get_by_text(re.compile(r"added to (your )?cart|go to cart", re.I))
         deadline = time.monotonic() + self.ADD_TO_CART_TIMEOUT_S
         while time.monotonic() < deadline:
             if "cart.ebay.com" in self.page.url:
                 return True
             if self.cart_count() > previous_count:
                 return True
-            if self.page.locator(self.ADDED_CONFIRMATION).first.is_visible():
+            if confirmation.first.is_visible():
                 return True
             self.page.wait_for_timeout(500)
         return False

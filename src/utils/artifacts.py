@@ -6,7 +6,7 @@ import re
 import shutil
 from pathlib import Path
 
-try:  # Allure is optional: the suite still runs with the HTML/JUnit reporters only.
+try:  # Allure is the reporter; guard the import so offline unit tests stay dependency-light.
     import allure
 except ImportError:  # pragma: no cover
     allure = None
@@ -26,10 +26,10 @@ class Artifacts:
             shutil.rmtree(directory, ignore_errors=True)
             directory.mkdir(parents=True, exist_ok=True)
 
-    def screenshot(self, page, name: str) -> Path:
+    def screenshot(self, page, name: str, full_page: bool = False) -> Path:
         self._sequence += 1
         path = self.screenshots_dir / f"{self._sequence:02d}-{_slug(name)}.png"
-        page.screenshot(path=str(path))
+        page.screenshot(path=str(path), full_page=full_page)
         if allure:
             allure.attach.file(str(path), name=name, attachment_type=allure.attachment_type.PNG)
         return path

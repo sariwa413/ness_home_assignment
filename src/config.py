@@ -8,9 +8,17 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import yaml
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_FILE = ROOT / "config" / "config.yaml"
+
+# Load .env before anything reads the environment, so a developer can set any override
+# below in one file instead of exporting it per shell. Real environment variables take
+# precedence, which keeps CI and one-off `$env:ENV="local"` runs in charge.
+# utf-8-sig because PowerShell's Set-Content writes a BOM, which would otherwise be
+# glued onto the first key and silently drop that one variable.
+load_dotenv(ROOT / ".env", override=False, encoding="utf-8-sig")
 
 
 def _to_bool(value: Any) -> bool:
@@ -36,7 +44,6 @@ class Config:
     timeout_ms: int
     slow_mo_ms: int
     navigation_retries: int
-    max_result_pages: int
     random_seed: Optional[int]
     artifacts_dir: Path
     auth: AuthConfig
@@ -63,7 +70,6 @@ class Config:
             timeout_ms=int(os.getenv("TIMEOUT_MS", data["timeout_ms"])),
             slow_mo_ms=int(os.getenv("SLOW_MO_MS", data["slow_mo_ms"])),
             navigation_retries=int(os.getenv("NAVIGATION_RETRIES", data["navigation_retries"])),
-            max_result_pages=int(os.getenv("MAX_RESULT_PAGES", data["max_result_pages"])),
             random_seed=int(os.getenv("RANDOM_SEED", data["random_seed"])),
             artifacts_dir=artifacts_dir if artifacts_dir.is_absolute() else ROOT / artifacts_dir,
             auth=AuthConfig(
