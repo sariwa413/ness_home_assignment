@@ -202,7 +202,7 @@ def _attach_failure_evidence(item, report) -> None:
     """Attach a screenshot and a diagnosis to the report, but never mask the real failure."""
     page = item.funcargs.get("page")
     artifacts = item.funcargs.get("artifacts")
-    if page is None or artifacts is None:  # an offline unit test, or setup never got that far
+    if page is None or artifacts is None:  # setup never got that far
         return
 
     name = "skip-screenshot" if report.skipped else "failure-screenshot"

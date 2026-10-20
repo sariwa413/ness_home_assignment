@@ -6,7 +6,7 @@ import re
 import shutil
 from pathlib import Path
 
-try:  # Allure is the reporter; guard the import so offline unit tests stay dependency-light.
+try:  # Allure is the reporter; guard the import so helpers stay usable without it.
     import allure
 except ImportError:  # pragma: no cover
     allure = None

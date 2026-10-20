@@ -53,34 +53,12 @@ $env:ENV="local"; .\.venv\Scripts\python.exe -m pytest -m e2e        # headed, s
 $env:DATASET="regression"; .\.venv\Scripts\python.exe -m pytest -m e2e  # the wider dataset
 ```
 
-Two further suites run offline, so they are fast and never flaky:
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest -m unit         # parsing helpers, no browser, ~0.4s
-.\.venv\Scripts\python.exe -m pytest -m integration  # paging against stubbed pages, ~20s
-.\.venv\Scripts\python.exe -m pytest                 # everything
-```
-
 A live run takes roughly five minutes: eBay is slow, and the suite deliberately backs off
 and retries when the site answers with its error page.
 
-### Testing the paging without waiting for 40 listings
-
-Paging only kicks in when one result page cannot satisfy `limit`, which against the live
-site means a long run. `tests/test_paging.py` pins the behaviour instead by serving
-stubbed result pages through Playwright's request interception, so each case is exact and
-takes a second:
-
-| Scenario | What it proves |
-| --- | --- |
-| 3 cards per page, `limit=7` | walks pages 1-3, stops mid-page, never fetches page 4 |
-| `limit=40`, only 5 listings exist | returns all 5 and stops at the last page |
-| listings over budget on page 2 | the price filter keeps applying on every page |
-| the same listing on two pages | counted once, so it cannot fill two slots |
-| a page with nothing usable | tolerated; paging continues to the page after it |
-
-To watch real paging instead, raise `limit` in `data/regression.json` above one page of
-results (`$env:DATASET="regression"`).
+Paging only kicks in when one result page cannot satisfy `limit`. To watch it against the
+live site, raise `limit` in `data/regression.json` above one page of results and run with
+`$env:DATASET="regression"`.
 
 ## Report
 
@@ -151,8 +129,7 @@ src/config.py                typed Config, YAML profile + env overrides
 src/utils/                   pure helpers: price parsing, URL canonicalisation, artifacts, datasets
 src/pages/                   Page Object Model, one class per screen
 src/flows/shopping_flow.py   the four business actions, composed from page objects
-tests/                       pytest fixtures + the data-driven scenarios
-tests/test_paging.py         paging proved against stubbed result pages
+tests/                       pytest fixtures + the data-driven e2e scenario
 scripts/allure.cmd           renders the Allure report (finds Java, serves over http)
 ```
 
@@ -167,8 +144,7 @@ Three layers, each with one responsibility:
 - **Tests** (`tests/`) know *which* data to run and *what* to assert. They read scenarios from
   JSON and never touch Playwright directly.
 
-Utilities (`src/utils`) are pure functions with no browser dependency, which is why they can be
-covered by fast offline tests.
+Utilities (`src/utils`) are pure functions with no browser dependency.
 
 ### Data-driven inputs
 
