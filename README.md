@@ -60,10 +60,8 @@ live site, raise `limit` in `data/scenarios.json` above one page of results.
 
 ## Report
 
-The suite produces a single **Allure** report. A snapshot of a passing run is committed at
-`artifacts/allure-report/` (screenshots included; the Playwright trace is left out of git
-because it is tens of megabytes). Each new run writes raw results to
-`artifacts/allure-results/` (cleared at the start of every run), then render it with the
+The suite produces a single **Allure** report. Each new run writes raw results to
+`artifacts/allure-results/` (cleared at the start of every run). Render them with the
 helper script, which locates Java for the session and opens the report in a browser:
 
 ```powershell
@@ -77,17 +75,24 @@ Equivalently, if the `allure` CLI and Java are already on your `PATH`:
 allure serve artifacts/allure-results
 ```
 
-Always view the report through `serve` (an `http://` URL). Opening
-`artifacts/allure-report/index.html` straight from disk — or from GitHub's file viewer —
-shows an empty or broken page, because browsers block the report's local data fetches over
-`file://`. After cloning, either run `.\scripts\allure.cmd` (needs a fresh `artifacts/allure-results`)
-or serve the committed snapshot:
+### Viewing the committed report
+
+A snapshot of a **passing** e2e run lives in the repo at
+[`artifacts/allure-report/`](https://github.com/sariwa413/ness_home_assignment/tree/main/artifacts/allure-report).
+It includes the step screenshots. The Playwright trace zip is not committed (it is tens of
+megabytes); generate a fresh one locally if you need it.
+
+**Do not open `index.html` on GitHub or as a `file://` path.** Allure loads its data with
+JavaScript fetches, which browsers block outside `http://`, so the page stays blank.
+
+After cloning, serve the snapshot and open it in a browser:
 
 ```powershell
 .\.venv\Scripts\python.exe -m http.server 8080 --directory artifacts/allure-report
 ```
 
-then open http://127.0.0.1:8080 .
+Then go to http://127.0.0.1:8080 . Alternatively, run the suite and then
+`.\scripts\allure.cmd`, which serves the latest results (needs Java).
 
 The report shows one test per scenario, titled with its query and budget, broken into clear
 steps — **Establish session → Search → Add item N/M → Verify cart subtotal** — with a
