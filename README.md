@@ -75,24 +75,19 @@ Equivalently, if the `allure` CLI and Java are already on your `PATH`:
 allure serve artifacts/allure-results
 ```
 
-### Viewing the committed report
+### Viewing the committed report (no test run needed)
 
-A snapshot of a **passing** e2e run lives in the repo at
-[`artifacts/allure-report/`](https://github.com/sariwa413/ness_home_assignment/tree/main/artifacts/allure-report).
-It includes the step screenshots. The Playwright trace zip is not committed (it is tens of
-megabytes); generate a fresh one locally if you need it.
+A snapshot of a **passing** e2e run is in the repo. You do not need to run the suite, install
+Java, or start a server.
 
-**Do not open `index.html` on GitHub or as a `file://` path.** Allure loads its data with
-JavaScript fetches, which browsers block outside `http://`, so the page stays blank.
+1. **Open the hosted report** (nothing to install):
+   [https://sariwa413.github.io/ness_home_assignment/](https://sariwa413.github.io/ness_home_assignment/)
+2. **Or clone and double-click** [`docs/index.html`](https://github.com/sariwa413/ness_home_assignment/blob/main/docs/index.html).
+   That file is a self-contained Allure report (screenshots inlined), so it works from disk.
 
-After cloning, serve the snapshot and open it in a browser:
-
-```powershell
-.\.venv\Scripts\python.exe -m http.server 8080 --directory artifacts/allure-report
-```
-
-Then go to http://127.0.0.1:8080 . Alternatively, run the suite and then
-`.\scripts\allure.cmd`, which serves the latest results (needs Java).
+The multi-file copy under `artifacts/allure-report/` is also committed, but that flavour
+must be served over `http://` (`.\scripts\allure.cmd` or `python -m http.server`) or it
+renders blank. The Playwright trace zip is not committed (it is tens of megabytes).
 
 The report shows one test per scenario, titled with its query and budget, broken into clear
 steps — **Establish session → Search → Add item N/M → Verify cart subtotal** — with a
@@ -143,8 +138,9 @@ src/utils/                   pure helpers: price parsing, URL canonicalisation, 
 src/pages/                   Page Object Model, one class per screen
 src/flows/shopping_flow.py   the four business actions, composed from page objects
 tests/                       pytest fixtures + the data-driven e2e scenario
-scripts/allure.cmd           renders the Allure report (finds Java, serves over http)
-artifacts/allure-report/     committed snapshot of a passing run
+scripts/allure.cmd           renders a fresh Allure report after a local run
+docs/index.html              self-contained snapshot — open in a browser, no test run
+artifacts/allure-report/     same run as a multi-file report (needs an http server)
 ```
 
 Three layers, each with one responsibility:
