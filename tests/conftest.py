@@ -113,7 +113,7 @@ _DIAGNOSES = (
     ),
     (
         "JSONDecodeError",
-        "A dataset under data/ is not valid JSON. Remember that JSON has no comments, so a\n"
+        "data/scenarios.json is not valid JSON. Remember that JSON has no comments, so a\n"
         "// line is enough to break the file.",
     ),
     (

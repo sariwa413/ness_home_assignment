@@ -1,5 +1,0 @@
-{
-  "scenarios": [
-    { "id": "harp_under_220", "query": "harp", "max_price": 220, "limit": 40 }
-  ]
-}

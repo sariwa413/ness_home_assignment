@@ -50,15 +50,13 @@ Variations:
 
 ```powershell
 $env:ENV="local"; .\.venv\Scripts\python.exe -m pytest -m e2e        # headed, slow motion
-$env:DATASET="regression"; .\.venv\Scripts\python.exe -m pytest -m e2e  # the wider dataset
 ```
 
 A live run takes roughly five minutes: eBay is slow, and the suite deliberately backs off
 and retries when the site answers with its error page.
 
 Paging only kicks in when one result page cannot satisfy `limit`. To watch it against the
-live site, raise `limit` in `data/regression.json` above one page of results and run with
-`$env:DATASET="regression"`.
+live site, raise `limit` in `data/scenarios.json` above one page of results.
 
 ## Report
 
@@ -124,7 +122,7 @@ entirely, so no machine-wide settings need changing.
 ```
 .env.example                 every overridable variable, documented; copy to .env
 config/config.yaml           profiles: default | local | ci
-data/*.json                  external test inputs (scenarios)
+data/scenarios.json          the e2e inputs (query, max_price, limit)
 src/config.py                typed Config, YAML profile + env overrides
 src/utils/                   pure helpers: price parsing, URL canonicalisation, artifacts, datasets
 src/pages/                   Page Object Model, one class per screen
@@ -148,8 +146,8 @@ Utilities (`src/utils`) are pure functions with no browser dependency.
 
 ### Data-driven inputs
 
-Scenarios live in `data/smoke.json` and `data/regression.json` and are injected via
-`pytest.mark.parametrize`; pick one with `DATASET=<name>`.
+The scenario lives in `data/scenarios.json` and is injected via `pytest.mark.parametrize`.
+Change the query, budget or limit there — no code change required.
 
 Configuration comes from `config/config.yaml`, which defines the `default`, `local` and `ci`
 profiles. Pick one with `ENV=<profile>`. Every field can be overridden per-run by an environment
